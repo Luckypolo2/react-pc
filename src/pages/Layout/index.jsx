@@ -15,9 +15,10 @@ const { Header, Sider } = Layout
 
 const GeekLayout = () => {
   const { pathname } = useLocation()
-  const { userStore, loginStore } = useStore()
+  const { userStore, loginStore, channelStore } = useStore()
   useEffect(() => {
     userStore.getUserInfo().then()
+    channelStore.loadChannelList().then()
   }, [])
   const navigate = useNavigate()
   const onConfirm = () => {

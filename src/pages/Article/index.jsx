@@ -1,29 +1,31 @@
 import React, { useEffect, useState } from "react"
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Card, Breadcrumb, Form, Button, Radio, DatePicker, Select, Table, Tag, Space } from 'antd'
 import 'moment/locale/zh-cn'
 import locale from 'antd/es/date-picker/locale/zh_CN'
 import './main.scss'
 import { DeleteOutlined, EditOutlined } from "@ant-design/icons"
 import { http } from '@/utils/http'
+import { useStore } from "@/store"
+import { observer } from "mobx-react-lite"
 
 const { Option } = Select
 const { RangePicker } = DatePicker
 
 const Article = () => {
-  const [ channelList, setChannelList ] = useState([])
-  const loadChannelList = async () => {
-    const res = await http.get('/channels')
-    setChannelList(res.data.data.channels)
-  }
+  const { channelStore } = useStore()
+  // const [ channelList, setChannelList ] = useState([])
+  // const loadChannelList = async () => {
+  //   const res = await http.get('/channels')
+  //   setChannelList(res.data.data.channels)
+  // }
   useEffect(() => {
-    loadChannelList().then()
   }, [])
   // 文章列表管理
   // eslint-disable-next-line no-unused-vars
   const [ list, setList ] = useState({
     list: [],
-    count: 0
+    count: 20
   })
   // 文章参数管理
   // eslint-disable-next-line no-unused-vars
@@ -58,6 +60,19 @@ const Article = () => {
       _params.end_pubdate = data[1].format('YYYY-MM-DD')
     }
     setParams({ ...params, ..._params })
+  }
+  const pageChange = (page) => {
+    setParams({ ...params, page })
+  }
+  const delArticle = async (data) => {
+    console.log(data)
+    await http.delete(`/mp/articles/${data.id}`)
+    // 刷新列表
+    setParams({ ...params, page: 1 })
+  }
+  const navigate = useNavigate()
+  const goPublish = (data) => {
+    navigate(`/publish?id=${data.id}`) // 跳转路由
   }
   const columns = [
     {
@@ -96,15 +111,16 @@ const Article = () => {
     },
     {
       title: '操作',
-      render: () => {
+      render: data => {
         return (
             <Space size="middle">
-              <Button type="primary" shape="circle" icon={<EditOutlined />} />
+              <Button type="primary" shape="circle" icon={<EditOutlined />} onClick={() => goPublish(data)} />
               <Button
                   type="primary"
                   danger
                   shape="circle"
                   icon={<DeleteOutlined />}
+                  onClick={() => delArticle(data)}
               />
             </Space>
         )
@@ -155,7 +171,7 @@ const Article = () => {
                   placeholder="请选择文章频道"
                   style={{ width: 120 }}
               >
-                {channelList.map(channels => <Option key={channels.id} value={channels.id}>{channels.name}</Option> )}
+                {channelStore.channelList.map(channels => <Option key={channels.id} value={channels.id}>{channels.name}</Option> )}
                 {/*<Option value="lucy">Lucy</Option>*/}
               </Select>
             </Form.Item>
@@ -173,10 +189,16 @@ const Article = () => {
           </Form>
         </Card>
         <Card title={`根据筛选条件共查询到 count 条结果：`}>
-          <Table rowKey="id" columns={columns} dataSource={data} />
+          <Table rowKey="id" columns={columns} dataSource={data} pagination={
+            {
+              pageSize: params.per_page,
+              total: list.count,
+              onChange: pageChange
+            }
+          } />
         </Card>
       </div>
   )
 }
 
-export default Article
+export default observer(Article)
